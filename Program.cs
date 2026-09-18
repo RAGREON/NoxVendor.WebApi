@@ -1,6 +1,12 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.IdentityModel.Tokens;
 using NoxVendor.WebApi.Data;
+using NoxVendor.WebApi.Models;
+using NoxVendor.WebApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,10 +27,47 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
   options.UseNpgsql(builder.Configuration.GetConnectionString("Default"));
 });
+
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+{
+  options.Password.RequireDigit = true;
+  options.Password.RequiredLength = 8;
+  options.User.RequireUniqueEmail = true;
+})
+.AddRoles<IdentityRole>()
+.AddEntityFrameworkStores<AppDbContext>()
+.AddDefaultTokenProviders();
+
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+var secretKey = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
+
+builder.Services.AddAuthentication(options =>
+{
+  options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+  options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+  options.TokenValidationParameters = new TokenValidationParameters
+  {
+    ValidateIssuer = true,
+    ValidateAudience = true,
+    ValidateLifetime = true,
+    ValidateIssuerSigningKey = true,
+    ValidIssuer = jwtSettings["Issuer"],
+    ValidAudience = jwtSettings["Audience"],
+    IssuerSigningKey = new SymmetricSecurityKey(secretKey),
+  };
+});
+
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<PasswordService>();
+builder.Services.AddSingleton<TokenService>();
 
 var app = builder.Build();
 
@@ -51,6 +94,7 @@ app.UseStaticFiles(
   }
 );
 
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
