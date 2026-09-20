@@ -4,7 +4,7 @@ using NoxVendor.WebApi.Models;
 
 namespace NoxVendor.WebApi.Data;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) 
+public class AppDbContext(DbContextOptions<AppDbContext> options)
   : IdentityDbContext<ApplicationUser>(options)
 {
   public DbSet<Product> Products => Set<Product>();
@@ -14,9 +14,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
   {
     base.OnModelCreating(modelBuilder);
 
-    modelBuilder.Entity<Product>()
-      .HasMany(p => p.Images)
-      .WithOne()
-      .HasForeignKey(i => i.ProductId);
+    modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
   }
 }
