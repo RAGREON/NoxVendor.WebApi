@@ -5,7 +5,8 @@ namespace NoxVendor.WebApi.Services;
 
 public class PasswordService(IPasswordHasher<ApplicationUser> passwordHasher)
 {
-  private readonly IPasswordHasher<ApplicationUser> _passwordHasher = passwordHasher;
+  private readonly IPasswordHasher<ApplicationUser> _passwordHasher =
+    passwordHasher;
 
   public string HashPassword(string password)
   {
