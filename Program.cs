@@ -1,12 +1,8 @@
-using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.IdentityModel.Tokens;
-using NoxVendor.WebApi.Data;
-using NoxVendor.WebApi.Models;
+using Microsoft.OpenApi;
+using NoxVendor.WebApi.Extensions;
 using NoxVendor.WebApi.Services;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,47 +22,56 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
 
-builder.Services.AddDbContext<AppDbContext>(options =>
+builder.Services.AddOpenApi(options =>
 {
-  options.UseNpgsql(builder.Configuration.GetConnectionString("Default"));
+  options.AddDocumentTransformer(
+    (document, context, cancellationToken) =>
+    {
+      document.Components ??= new OpenApiComponents();
+      document.Components.SecuritySchemes = new Dictionary<
+        string,
+        IOpenApiSecurityScheme
+      >
+      {
+        ["Bearer"] = new OpenApiSecurityScheme
+        {
+          Type = SecuritySchemeType.Http,
+          Scheme = "bearer",
+          In = ParameterLocation.Header,
+          BearerFormat = "JWT",
+        },
+      };
+      foreach (
+        var operation in document.Paths.Values.SelectMany(path =>
+          path.Operations!
+        )
+      )
+      {
+        operation.Value.Security ??= [];
+
+        operation.Value.Security.Add(
+          new OpenApiSecurityRequirement
+          {
+            [new OpenApiSecuritySchemeReference("Bearer", document)] = [],
+          }
+        );
+      }
+
+      document.SetReferenceHostDocument();
+
+      return Task.CompletedTask;
+    }
+  );
 });
 
-builder.Services.AddIdentityCore<ApplicationUser>(options =>
-{
-  options.Password.RequireDigit = true;
-  options.Password.RequiredLength = 8;
-  options.User.RequireUniqueEmail = true;
-})
-.AddRoles<IdentityRole>()
-.AddEntityFrameworkStores<AppDbContext>()
-.AddDefaultTokenProviders();
-
-var jwtSettings = builder.Configuration.GetSection("Jwt");
-var secretKey = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
-
-builder.Services.AddAuthentication(options =>
-{
-  options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-  options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-  options.TokenValidationParameters = new TokenValidationParameters
-  {
-    ValidateIssuer = true,
-    ValidateAudience = true,
-    ValidateLifetime = true,
-    ValidateIssuerSigningKey = true,
-    ValidIssuer = jwtSettings["Issuer"],
-    ValidAudience = jwtSettings["Audience"],
-    IssuerSigningKey = new SymmetricSecurityKey(secretKey),
-  };
-});
+// Extensions
+builder.Services.AddDatabase(builder.Configuration);
+builder.Services.AddIdentityServices();
+builder.Services.AddJwtAuthentication(builder.Configuration);
 
 builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<PasswordService>();
+builder.Services.AddScoped<RoleService>();
 builder.Services.AddSingleton<TokenService>();
 
 var app = builder.Build();
@@ -78,9 +83,11 @@ app.UseCors("AllowFrontendApp");
 if (app.Environment.IsDevelopment())
 {
   app.MapOpenApi();
-  app.UseSwaggerUI(options =>
+  app.MapScalarApiReference(options =>
   {
-    options.SwaggerEndpoint("/openapi/v1.json", "API v1");
+    options
+      .WithTitle("NoxVendor API")
+      .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
   });
 }
 
@@ -96,6 +103,7 @@ app.UseStaticFiles(
 
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();
