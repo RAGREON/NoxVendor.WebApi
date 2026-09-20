@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NoxVendor.WebApi.DTOs;
 using NoxVendor.WebApi.Services;
@@ -9,11 +10,12 @@ namespace NoxVendor.WebApi.Controllers;
 public class AuthController(AuthService authService) : ControllerBase
 {
   private readonly AuthService _authService = authService;
-  
+
+  [AllowAnonymous]
   [HttpPost("login")]
   public async Task<IActionResult> Login(LoginRequest request)
   {
-    try 
+    try
     {
       var token = await _authService.LoginUser(request);
       return Ok(new { token });
@@ -24,10 +26,11 @@ public class AuthController(AuthService authService) : ControllerBase
     }
   }
 
+  [AllowAnonymous]
   [HttpPost("register")]
   public async Task<IActionResult> Register(RegisterRequest request)
   {
-    try 
+    try
     {
       var userId = await _authService.RegisterUser(request);
       return Ok(new { userId });
