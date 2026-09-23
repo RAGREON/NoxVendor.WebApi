@@ -17,7 +17,7 @@ public static class IdentityExtensions
         options.Password.RequiredLength = 8;
         options.User.RequireUniqueEmail = true;
       })
-      .AddRoles<IdentityRole>()
+      .AddRoles<IdentityRole<Guid>>()
       .AddEntityFrameworkStores<AppDbContext>()
       .AddDefaultTokenProviders();
 
