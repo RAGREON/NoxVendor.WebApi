@@ -9,7 +9,6 @@ namespace NoxVendor.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize]
 public class ProductsController(AppDbContext context) : ControllerBase
 {
   private readonly string _uploadFolder = Path.Combine(
@@ -18,19 +17,20 @@ public class ProductsController(AppDbContext context) : ControllerBase
   );
   private readonly AppDbContext _context = context;
 
-  [HttpGet("{id:int}")]
-  public async Task<IActionResult> GetProductById([FromRoute] int id)
+  [HttpGet("{id}")]
+  public async Task<IActionResult> GetProductById([FromRoute] Guid id)
   {
     var product = await _context
       .Products.Where(p => p.Id == id)
-      .Select(p => new
-      {
+      .Select(p => new ProductDto(
         p.Id,
         p.Name,
         p.Description,
         p.Price,
-        Images = p.Images.Select(i => i.Url).ToList(),
-      })
+        p.Stock,
+        p.Categories.Select(c => c.Name).ToList(),
+        p.Images.Select(i => i.Url!).ToList()
+      ))
       .FirstOrDefaultAsync();
 
     return Ok(product);

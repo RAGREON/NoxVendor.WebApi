@@ -4,9 +4,9 @@ using NoxVendor.WebApi.DTOs;
 
 namespace NoxVendor.WebApi.Services;
 
-public class RoleService(RoleManager<IdentityRole> roleManager)
+public class RoleService(RoleManager<IdentityRole<Guid>> roleManager)
 {
-  private readonly RoleManager<IdentityRole> _roleManager = roleManager;
+  private readonly RoleManager<IdentityRole<Guid>> _roleManager = roleManager;
 
   public async Task CreateRoleAsync(string role)
   {
@@ -14,7 +14,7 @@ public class RoleService(RoleManager<IdentityRole> roleManager)
 
     if (!exists)
     {
-      var result = await _roleManager.CreateAsync(new IdentityRole(role));
+      var result = await _roleManager.CreateAsync(new IdentityRole<Guid>(role));
 
       if (!result.Succeeded)
       {

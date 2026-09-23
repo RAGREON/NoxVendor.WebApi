@@ -2,9 +2,17 @@ using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("/api/v1/[controller]")]
-class DefaultController : ControllerBase {
+public class DefaultController : ControllerBase
+{
   [HttpGet]
-  public IActionResult Index() {
-    return Ok("Default controller");
+  public IActionResult Index([FromQuery] string? Name)
+  {
+    return Ok($"Default controller: {Name}");
+  }
+
+  [HttpGet("error")]
+  public IActionResult Error()
+  {
+    throw new Exception("Error testing");
   }
 }

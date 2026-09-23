@@ -15,6 +15,11 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
     builder
       .HasMany(p => p.Categories)
-      .WithMany();
+      .WithMany(c => c.Products);
+
+    builder
+      .HasMany(p => p.Reviews)
+      .WithOne(r => r.Product)
+      .HasForeignKey(r => r.ProductId);
   }
 }

@@ -33,6 +33,7 @@ public class TokenService(IConfiguration config)
     foreach (var role in roles)
     {
       claims.Add(new(ClaimTypes.Role, role));
+      Console.WriteLine(role);
     }
 
     var tokenDescriptor = new SecurityTokenDescriptor

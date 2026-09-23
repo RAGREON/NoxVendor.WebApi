@@ -1,6 +1,7 @@
 using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi;
 using NoxVendor.WebApi.Extensions;
+using NoxVendor.WebApi.Middlewares;
 using NoxVendor.WebApi.Services;
 using Scalar.AspNetCore;
 
@@ -22,6 +23,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddControllers();
+builder.Services.AddLogging();
 
 builder.Services.AddOpenApi(options =>
 {
@@ -29,10 +31,7 @@ builder.Services.AddOpenApi(options =>
     (document, context, cancellationToken) =>
     {
       document.Components ??= new OpenApiComponents();
-      document.Components.SecuritySchemes = new Dictionary<
-        string,
-        IOpenApiSecurityScheme
-      >
+      document.Components.SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>
       {
         ["Bearer"] = new OpenApiSecurityScheme
         {
@@ -42,11 +41,7 @@ builder.Services.AddOpenApi(options =>
           BearerFormat = "JWT",
         },
       };
-      foreach (
-        var operation in document.Paths.Values.SelectMany(path =>
-          path.Operations!
-        )
-      )
+      foreach (var operation in document.Paths.Values.SelectMany(path => path.Operations!))
       {
         operation.Value.Security ??= [];
 
@@ -72,6 +67,7 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<RoleService>();
+builder.Services.AddScoped<OrderService>();
 builder.Services.AddSingleton<TokenService>();
 
 var app = builder.Build();
@@ -83,6 +79,12 @@ app.UseCors("AllowFrontendApp");
 if (app.Environment.IsDevelopment())
 {
   app.MapOpenApi();
+
+  app.UseSwaggerUI(options =>
+  {
+    options.SwaggerEndpoint("/openapi/v1.json", "NoxVendor API v1");
+  });
+
   app.MapScalarApiReference(options =>
   {
     options
@@ -100,6 +102,8 @@ app.UseStaticFiles(
     RequestPath = "/images",
   }
 );
+
+app.UseMiddleware<ExceptionHandler>();
 
 app.UseAuthentication();
 app.UseAuthorization();

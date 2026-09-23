@@ -12,7 +12,7 @@ public class AuthService(
   private readonly UserManager<ApplicationUser> _userManager = userManager;
   private readonly TokenService _tokenService = tokenService;
 
-  public async Task<string> RegisterUser(RegisterRequest request)
+  public async Task<Guid> RegisterUser(RegisterRequest request)
   {
     var user = await _userManager.FindByEmailAsync(request.Email);
 
@@ -40,8 +40,7 @@ public class AuthService(
 
   public async Task<string> LoginUser(LoginRequest request)
   {
-    var user =
-      await _userManager.FindByEmailAsync(request.Email)
+    var user = await _userManager.FindByEmailAsync(request.Email)
       ?? throw new ArgumentException($"Invalid email or password");
 
     bool isValidPassword = await _userManager.CheckPasswordAsync(
@@ -54,7 +53,13 @@ public class AuthService(
       throw new ArgumentException($"Invalid email or password");
     }
 
-    var token = _tokenService.GenerateJwtToken(user.Id, user.Email!, ["User"]);
+    var roles = await _userManager.GetRolesAsync(user);
+
+    var token = _tokenService.GenerateJwtToken(
+      user.Id.ToString(),
+      user.Email!,
+      roles
+    );
 
     return token;
   }
